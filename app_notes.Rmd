@@ -1,0 +1,123 @@
+---
+title: covid19 R Shiny notebook
+output: html_notebook
+---
+
+```{r}
+# load dependencies
+library(rgdal)
+library(geojsonio)
+library(ggplot2)
+library(leaflet)
+library(plotly)
+library(RColorBrewer)
+library(dplyr)
+library(broom)
+library(mapproj)
+library(reshape2)
+library(digest)
+library(lubridate)
+library(spdplyr)
+library(rmapshaper)
+library(raster)
+library(mapview)
+```
+
+
+```{r}
+# try this with: https://www.r-graph-gallery.com/168-load-a-shape-file-into-r.html
+
+zipcode_boundaries <- readOGR("../ZIP_CODE_040114/ZIP_CODE_040114.shp",
+  layer = "ZIP_CODE_040114", verbose = FALSE)
+
+# try different table of zipcodes:
+#alt_zipcode_boundaries <- readOGR("../alt_nyczip/nyc_zip_code_tabulation_areas_polygons.shp",
+#  layer = "nyc_zip_code_tabulation_areas_polygons", verbose = FALSE)
+
+# fortify the data to obtain dataframe for use by ggplot2
+zipcode_boundaries_fortified <- tidy(zipcode_boundaries, region = "ZIPCODE")
+
+# plot it
+ggplot() +
+  geom_polygon(data = zipcode_boundaries_fortified,
+               aes(x = long, y = lat, group = group),
+               fill = "#69b3a2", color="white") +
+  theme_void()
+```
+
+```{r}
+# try using info from: https://nceas.github.io/oss-lessons/spatial-data-gis-law/3-mon-intro-gis-in-r.html
+
+class(zipcode_boundaries)
+
+extent(zipcode_boundaries)
+
+plot(zipcode_boundaries, main = "NYC zipcode boundaries")
+```
+
+
+```{r}
+# convert spatial data frame to geojson
+# nyc_json <- geojson_json(zipcode_boundaries)
+# save to local file
+# geojson_write(nyc_json, file = "./nyc.geojson")
+
+alt_nyc_json <- geojson_json(alt_zipcode_boundaries)
+geojson_write(alt_nyc_json, file = "./alt_nyc.geojson")
+```
+
+```{r}
+# create leaflet object
+pal <- colorNumeric("viridis", NULL)
+
+leaflet(alt_zipcode_boundaries) %>%
+#  addProviderTiles(providers$OpenStreetMap) %>% 
+  addTiles() %>% #add basemap
+#  addPolygons(stroke = FALSE, smoothFactor = 0.3, fillOpacity = 1,
+#    fillColor = ~pal(borough),
+#    label = borough) %>%
+  addPolylines(color = "#444444", 
+               weight = 1, 
+               smoothFactor = 0.5, 
+               opacity = 1.0)
+```
+
+
+```{r}
+### run it all again but this time with SF (faster?)
+
+library(sf)
+
+zipcode_sf <- st_read("../alt_nyczip/nyc_zip_code_tabulation_areas_polygons.shp")
+
+ggplot() +
+  geom_sf(data=zipcode_sf, aes(fill = borough)) 
+```
+
+```{r}
+mapview(zipcode_sf)
+```
+
+```{r}
+# try leaflet with this
+pal <- colorFactor(rainbow(5), zipcode_sf$borough)
+
+leaflet(zipcode_sf) %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap 
+  addPolygons(stroke = FALSE, 
+              smoothFactor = 0.3, 
+              fillOpacity = 0.2,
+    highlight = highlightOptions(color = "white", weight = 10, bringToFront = TRUE))  %>%
+  addPolylines(color = "#444444", 
+               weight = 1, 
+               smoothFactor = 0.5, 
+               opacity = 1.0, 
+               highlightOptions = highlightOptions(color = "white", 
+                                                   weight = 5, 
+                                                   bringToFront = F, 
+                                                   opacity = 1))
+```
+
+
+
+
