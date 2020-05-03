@@ -328,6 +328,40 @@ df_final = read.csv("cleaned_data/non_polygon_df_final.csv", check.names = F, st
 ```
 
 ```{r}
-max(df_final$positive_per_capita, na.rm=T)
+# find top 10 poorest zipcodes
+# find top 10 richest zipcodes
+
+top_10_richest <- unique(as.vector(df_final[order(-df_final$median_household_income),][1:78, 2]))
+top_10_poorest <- unique(as.vector(df_final[order(df_final$median_household_income),][1:10, 2]))
+```
+
+```{r}
+top_10_richest_df <- df_final[df_final$zip %in% top_10_richest,]
+
+# rename ZIP column to postalCode to enable merge
+colnames(top_10_richest_df)[which(names(top_10_richest_df) == "zip")] <- "postalCode"
+top_10_richest_df$postalCode <- as.character(top_10_richest_df$postalCode)
+
+# recode DATE column as date data type
+top_10_richest_df$date <- as.Date(top_10_richest_df$date, "%Y-%m-%d")
+top_10_richest_spdf <- df_leaflet
+top_10_richest_spdf <- subset(top_10_richest_spdf, postalCode == 10306)
+```
+
+```{r}
+top_10_poorest_df <- df_final[df_final$zip %in% top_10_poorest,]
+
+# rename ZIP column to postalCode to enable merge
+colnames(top_10_poorest_df)[which(names(top_10_poorest_df) == "zip")] <- "postalCode"
+top_10_poorest_df$postalCode <- as.character(top_10_poorest_df$postalCode)
+
+# recode DATE column as date data type
+top_10_poorest_df$date <- as.Date(top_10_poorest_df$date, "%Y-%m-%d")
+top_10_poorest_spdf <- df_leaflet
+top_10_poorest_spdf <- top_10_poorest_spdf[top_10_poorest_spdf@data$postalCode %in% top_10_poorest, ]
+```
+
+```{r}
+top_10_richest
 ```
 

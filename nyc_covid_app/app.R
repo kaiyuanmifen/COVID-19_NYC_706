@@ -118,6 +118,7 @@ server = function(input, output, session) {
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Population: ", df_leaflet@data$population,"<br/>", 
                 "Positive cases: ",target_date_pos$positive, "<br/>", 
                 "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
                 "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
@@ -156,6 +157,7 @@ server = function(input, output, session) {
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Population: ", df_leaflet@data$population,"<br/>",
                 "Total tested: ",target_date_pos$total, "<br/>", 
                 "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
                 "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
@@ -193,6 +195,7 @@ server = function(input, output, session) {
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Population: ", df_leaflet@data$population,"<br/>",
                 "Total tested per million capita: ",target_date_pos$tests_per_capita, "<br/>",
                 "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
                 "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
@@ -230,6 +233,7 @@ server = function(input, output, session) {
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Population: ", df_leaflet@data$population,"<br/>",
                 "Positive cases per million capita: ",target_date_pos$positive_per_capita, "<br/>", 
                 "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
                 "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
@@ -275,7 +279,8 @@ server = function(input, output, session) {
             mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$positive, na.color="transparent", bins=mybins)
             
             mytag = paste(
-                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>",
+                "Population: ", df_leaflet@data$population,"<br/>",
                 "Positive cases: ",target_date_pos$positive, "<br/>", 
                 "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
                 "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
@@ -313,6 +318,7 @@ server = function(input, output, session) {
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Population: ", df_leaflet@data$population,"<br/>",
                 "Total tested: ",target_date_pos$total, "<br/>", 
                 "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
                 "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
