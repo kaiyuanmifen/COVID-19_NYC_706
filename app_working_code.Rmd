@@ -1,0 +1,49 @@
+---
+title: "code to map over to Shiny"
+output: html_notebook
+---
+
+
+```{r}
+# load dependencies
+library(rgdal)
+library(geojsonio)
+library(ggplot2)
+library(leaflet)
+library(plotly)
+library(RColorBrewer)
+library(dplyr)
+library(broom)
+library(mapproj)
+library(reshape2)
+library(digest)
+library(lubridate)
+library(spdplyr)
+library(rmapshaper)
+library(raster)
+library(mapview)
+library(sf)
+library(httr)
+library(janitor)
+
+```
+
+```{r}
+# load polygon data
+ny_spdf = geojson_read("cleaned_data/nyc-zip-code-tabulation-areas-polygons.geojson",  what = "sp")
+
+leaflet() %>%
+  addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap 
+  addPolygons(data = ny_spdf,
+              weight = 1,
+              stroke = TRUE, 
+              smoothFactor = 0.3, 
+              fillOpacity = 0.2,
+    highlight = highlightOptions(color = "white", weight = 1, bringToFront = TRUE))
+```
+
+```{r}
+# combine dataframes to derive salient information re. each of these zipcodes
+
+```
+

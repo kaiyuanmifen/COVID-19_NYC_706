@@ -1,0 +1,260 @@
+# load dependencies:
+library(shiny)
+library(rgdal)
+library(geojsonio)
+library(ggplot2)
+library(leaflet)
+library(plotly)
+library(RColorBrewer)
+library(dplyr)
+library(broom)
+library(mapproj)
+library(reshape2)
+library(digest)
+library(lubridate)
+library(spdplyr)
+library(rmapshaper)
+library(raster)
+library(mapview)
+library(sf)
+library(httr)
+library(janitor)
+
+# load datasets:
+ny_spdf = geojson_read("../cleaned_data/nyc-zip-code-tabulation-areas-polygons.geojson",  what = "sp")
+df_leaflet = ny_spdf
+df_final = read.csv("../cleaned_data/zip_count_rate_temp.csv", check.names = F, stringsAsFactors = F)
+df_final <- clean_names(df_final)
+
+# rename ZIP column to postalCode to enable merge
+colnames(df_final)[which(names(df_final) == "zip")] <- "postalCode"
+df_final$postalCode <- as.character(df_final$postalCode)
+
+# recode DATE column as date data type
+df_final$date <- as.Date(df_final$date, "%Y-%m-%d")
+df_leaflet@data = left_join(df_leaflet@data, df_final,by = "postalCode")
+
+
+
+# Define UI for application that draws a histogram
+ui <- fluidPage(
+
+    titlePanel(NULL, windowTitle = "COVID-19 outbreak in MNYC"),
+    
+    tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href="https://fonts.googleapis.com/css?family=Roboto&display=swap")
+    ),
+    
+    tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href="https://fonts.googleapis.com/css2?family=Lato:wght@300;400&display=swap")
+    ),
+    
+    tags$head(
+        tags$link(rel = "stylesheet", type = "text/css", href = "myTheme.css")
+    ),
+    
+    fluidRow(
+        column(10, offset = 1, align="left",   
+               h2("Spatiotemporal evolution of the outbreak"),
+               HTML("<p>The following map shows the break down of the NYC COVID-19 cases by zipcodes.
+                                 It is possible to use the slider to have a look at the situation on a specific date. 
+                                 You can also click on 'positive' for numbers who tested positive for COVID-19, and 'total' for total numbers who were tested.
+                                 Finally, by clicking on the play button it is possible to have a look at the spatiotemporal evolution of the epidemic. 
+                                 </p>"),
+               br()
+        )),
+    
+    
+    fluidRow(
+        column(10,offset = 1, align="center",
+               selectInput("choose_stat","Statistic of interest",choices = c("positive cases","total tested")),
+               br(),
+        )),
+    
+    fluidRow(
+        column(10,offset = 1, align="left",
+               leafletOutput("leaflet_chloropleth"),
+               br(),
+        )),
+    
+    fluidRow(
+        column(10, offset = 1, align="center",
+               sliderInput("date",
+                           "Dates:",
+                           min = unique(min(as.Date(df_final$date,"%Y-%m-%d"))),
+                           max = unique(max(as.Date(df_final$date,"%Y-%m-%d"))),
+                           value = unique(max(as.Date(df_final$date,"%Y-%m-%d"))),
+                           width="60%", 
+                           animate = animationOptions(interval = 5000, loop = FALSE, playButton = NULL,
+                                                      pauseButton = NULL)
+               ),
+               br()
+        )),
+
+    fluidRow(
+        column(10, offset=1, align="left",
+               HTML('Data: <a href="https://www1.nyc.gov/site/doh/covid/covid-19-data.page">NYC Open Data</a>.'),
+               br(),
+               br(),
+               br(),
+               
+        ))
+)
+
+# Define server logic required to draw a histogram
+server = function(input, output, session) {
+    
+    output$leaflet_chloropleth = renderLeaflet({
+        
+        # encode inputs of user
+        stat <- input$choose_stat
+        target_date <- as.Date(input$date)
+        
+        if(stat == 'positive cases'){
+            # subset dataframe for inputs
+            target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','positive'))
+            
+            mybins = seq(0, 3000, by = 500)
+            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$positive, na.color="transparent", bins=mybins)
+            
+            mytag = paste(
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Positive cases: ",target_date_pos$positive, "<br/>", 
+                sep="") %>%
+                lapply(htmltools::HTML)
+            
+            leaflet(df_leaflet) %>% 
+                addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap
+                #  clearShapes() %>%
+                setView(-73.935242, 40.710310, zoom = 9.5) %>%
+                addPolygons(data =df_leaflet, 
+                            fillColor = ~mypalette(target_date_pos$positive),
+                            fillOpacity = 0.5,
+                            stroke=TRUE,
+                            weight=0.8,
+                            color="#000000",
+                            label = mytag,
+                            labelOptions = labelOptions(
+                                style = list("font-weight" = "normal", padding = "3px 8px"),
+                                textsize = "10px",
+                                direction = "auto"),
+                            highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                clearControls() %>%
+                addLegend( pal=mypalette, values=target_date_pos$positive, opacity=0.5, title = "Cases", position = "bottomleft" )
+            
+        }else if(stat == 'total tested'){
+            # subset dataframe for inputs
+            target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','total'))
+            
+            mybins = seq(0, 5000, by = 1000)
+            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$total, na.color="transparent", bins=mybins)
+            
+            mytag = paste(
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Total tested: ",target_date_pos$total, "<br/>", 
+                sep="") %>%
+                lapply(htmltools::HTML)
+            
+            leaflet(df_leaflet) %>% 
+                addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap
+                #  clearShapes() %>%
+                setView(-73.935242, 40.710310, zoom = 9.5) %>%
+                addPolygons(data =df_leaflet, 
+                            fillColor = ~mypalette(target_date_pos$total),
+                            fillOpacity = 0.5,
+                            stroke=TRUE,
+                            weight=0.8,
+                            color="#000000",
+                            label = mytag,
+                            labelOptions = labelOptions(
+                                style = list("font-weight" = "normal", padding = "3px 8px"),
+                                textsize = "10px",
+                                direction = "auto"),
+                            highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                clearControls() %>%
+                addLegend( pal=mypalette, values=target_date_pos$total, opacity=0.5, title = "Cases", position = "bottomleft" )
+            
+            
+            
+        }
+    })
+    
+    observe({
+        
+        # note how this mirrors the code above except for leafletProxy (see the if...else... below)
+        stat <- input$choose_stat
+        
+        target_date <- as.Date(input$date)
+        
+        if(stat == 'positive cases'){
+            target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','positive'))
+            
+            mybins = seq(0, 3000, by = 500)
+            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$positive, na.color="transparent", bins=mybins)
+            
+            mytag = paste(
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Positive cases: ",target_date_pos$positive, "<br/>", 
+                sep="") %>%
+                lapply(htmltools::HTML)
+            
+            leafletProxy("leaflet_chloropleth") %>%
+                clearShapes() %>%
+                setView(-73.935242, 40.710310, zoom = 9.5) %>%
+                #addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap
+                #  clearShapes() %>%
+                addPolygons(data =df_leaflet, 
+                            fillColor = ~mypalette(target_date_pos$positive),
+                            fillOpacity = 0.5,
+                            stroke=TRUE,
+                            weight=0.8,
+                            color="#000000",
+                            label = mytag,
+                            labelOptions = labelOptions(
+                                style = list("font-weight" = "normal", padding = "3px 8px"),
+                                textsize = "10px",
+                                direction = "auto"),
+                            highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                clearControls() %>%
+                addLegend( pal=mypalette, values=target_date_pos$positive, opacity=0.5, title = "Cases", position = "bottomleft" )
+        }else if(stat == 'total tested'){
+            target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','total'))
+            
+            mybins = seq(0, 5000, by = 1000)
+            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$total, na.color="transparent", bins=mybins)
+            
+            mytag = paste(
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Total tested: ",target_date_pos$total, "<br/>", 
+                sep="") %>%
+                lapply(htmltools::HTML)
+            
+            leafletProxy("leaflet_chloropleth") %>%
+                clearShapes() %>%
+                setView(-73.935242, 40.710310, zoom = 9.5) %>%
+                #addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap
+                #  clearShapes() %>%
+                addPolygons(data =df_leaflet, 
+                            fillColor = ~mypalette(target_date_pos$total),
+                            fillOpacity = 0.5,
+                            stroke=TRUE,
+                            weight=0.8,
+                            color="#000000",
+                            label = mytag,
+                            labelOptions = labelOptions(
+                                style = list("font-weight" = "normal", padding = "3px 8px"),
+                                textsize = "10px",
+                                direction = "auto"),
+                            highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                clearControls() %>%
+                addLegend( pal=mypalette, values=target_date_pos$total, opacity=0.5, title = "Cases", position = "bottomleft" )
+            
+            
+        }    
+    } )
+    
+    
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
