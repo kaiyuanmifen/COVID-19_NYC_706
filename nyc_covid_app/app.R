@@ -21,7 +21,7 @@ library(httr)
 library(janitor)
 library(lattice)
 library(sp)
-
+library(ggplot2)
 # load datasets:
 ny_spdf = geojson_read("../cleaned_data/nyc-zip-code-tabulation-areas-polygons.geojson",  what = "sp")
 df_leaflet = ny_spdf
@@ -36,6 +36,10 @@ df_final$postalCode <- as.character(df_final$postalCode)
 df_final$date <- as.Date(df_final$date, "%Y-%m-%d")
 df_leaflet@data = left_join(df_leaflet@data, df_final,by = "postalCode")
 
+df_leaflet$white_prop
+df_leaflet$black_prop
+plot(df_leaflet$positive_per_capita~df_leaflet$hispanic_prop)
+df_leaflet$positive
 
 
 # Define UI for application that draws a histogram
@@ -98,12 +102,62 @@ ui <- fluidPage(
                br(),
                br(),
                br(),
-               
-        ))
+        )),
+    
+    #Trend
+    plotOutput("Trend"),
+    
+    #select variable 2 for statistics  
+    fluidRow(column(10,offset = 1, align="center",selectInput("Variable2", "Variable2",c("positive","positive_per_capita","tests_per_capita" )),br(),
+        )),
+    #select variable 1 for statistics 
+    fluidRow(column(10,offset = 1, align="center",selectInput("Variable1", "Variable1",c("median_household_income",
+                                           "male_prop","female_prop","white_prop",
+                                           "black_prop", "asian_prop","hawaiian_pi_prop",
+                                           "multi_race_prop","other_prop","hispanic_prop" )),br(),
+    )),
+    
+    #positive rate
+    plotOutput("TwoVariablePlot")
 )
 
 # Define server logic required to draw a histogram
 server = function(input, output, session) {
+ 
+    observe({
+        stat=input$choose_stat
+        if(stat == 'positive cases'){df_final$Trend=df_final[,"positive"]}
+        if(stat == "positive cases per million capita"){df_final$Trend=df_final[,"positive_per_capita"]}
+        if(stat == 'total tested'){df_final$Trend=df_final[,"total"]}    
+        if(stat == "total tested per million capita"){df_final$Trend=df_final[,"tests_per_capita"]}
+ 
+        
+        output$Trend <- renderPlot({
+            ggplot(df_final, aes(x=date,y=Trend,color=postalCode)) + 
+                geom_line(linetype = "dashed")+
+                geom_point()+xlab("date")+ylab(stat)+ theme(legend.position = "none")+
+                ggtitle("Trend over time by zip code")
+           
+        })
+    })
+    
+    
+    #Boxplot
+    observe({
+    df_final$Variable2=df_final[,input$Variable2]
+    df_final$Variable1=df_final[,input$Variable1]
+    
+    output$TwoVariablePlot <- renderPlot({
+        ggplot(df_final, aes(x=as.factor(Variable1),y=Variable2)) + 
+            geom_boxplot(notch=TRUE)+xlab(input$Variable1)+ylab(input$Variable2)+ theme_bw()+
+            ggtitle("County(borough) level statistics")
+        #plot(df_final$positive_per_capita~df_final$median_household_income,main="PositiveRate vs. median income",
+             #ylab="Positive per capita")
+    })
+    })
+   
+    
+    
     
     output$leaflet_chloropleth = renderLeaflet({
         
