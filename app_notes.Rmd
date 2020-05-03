@@ -24,6 +24,8 @@ library(mapview)
 library(sf)
 library(httr)
 library(janitor)
+library(lattice)
+library(sp)
 ```
 
 
@@ -193,12 +195,11 @@ leaflet(combined_sf) %>%
 #                                                   opacity = 1))
 ```
 
-```{r}
-# how is the massachusetts dataframe organised?
-ma_spdf = geojson_read("cleaned_data/cb_2018_ma_county_5m.json",  what = "sp")
 
-ma_spdf
-```
+
+
+This code below works:
+
 
 ```{r}
 # how is the nyc zipcode dataframe organised?
@@ -209,7 +210,7 @@ ny_spdf
 
 ```{r}
 
-pal <- colorFactor(rainbow(5), ny_spdf$borough) 
+borough_color <- colorFactor("viridis", ny_spdf$borough) 
 
 leaflet() %>%
   addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap 
@@ -218,9 +219,47 @@ leaflet() %>%
               stroke = TRUE, 
               smoothFactor = 0.3, 
               fillOpacity = 0.2,
-              fillColor = ~pal(ny_spdf$borough),
-    highlight = highlightOptions(color = "white", weight = 1, bringToFront = TRUE))
+              fillColor = ~borough_color(ny_spdf$borough),
+    highlight = highlightOptions(color = "white", weight = 1, bringToFront = TRUE)) %>%
+  addPolylines(data = ny_spdf,
+               color = ~borough_color(ny_spdf$borough), 
+               weight = 1, 
+               smoothFactor = 0.5, 
+               opacity = 1.0, )
 ```
+
+```{r}
+# load datasets:
+ny_spdf = geojson_read("cleaned_data/nyc-zip-code-tabulation-areas-polygons.geojson",  what = "sp")
+df_leaflet = ny_spdf
+df_final = read.csv("cleaned_data/non_polygon_df_final.csv", check.names = F, stringsAsFactors = F)
+df_final <- clean_names(df_final)
+
+# rename ZIP column to postalCode to enable merge
+colnames(df_final)[which(names(df_final) == "zip")] <- "postalCode"
+df_final$postalCode <- as.character(df_final$postalCode)
+
+# recode DATE column as date data type
+df_final$date <- as.Date(df_final$date, "%Y-%m-%d")
+df_leaflet@data = left_join(df_leaflet@data, df_final,by = "postalCode")
+```
+
+```{r}
+# try to incorporate subset graphs into Leaflet
+# subset df_final for just one date:
+df_oneday <- df_final[df_final$date == "2020-04-01",]
+
+df_oneday %>%
+  group_by(name) %>%
+  summarise_at(.vars = names(.)[23:24],.funs = c(mean="mean"))
+
+
+
+```
+
+
+
+
 
 
 ```{r}
@@ -234,14 +273,13 @@ ny_spdf@data
 ```
 
 ```{r}
+
 # rename ZIP column to postalCode to enable merge
 colnames(df_final)[which(names(df_final) == "zip")] <- "postalCode"
-
 df_final$postalCode <- as.character(df_final$postalCode)
 
 # recode DATE column as date data type
 df_final$date <- as.Date(df_final$date, "%Y-%m-%d")
-
 df_leaflet@data = left_join(df_leaflet@data, df_final,by = "postalCode")
 
 ```
@@ -362,6 +400,6 @@ top_10_poorest_spdf <- top_10_poorest_spdf[top_10_poorest_spdf@data$postalCode %
 ```
 
 ```{r}
-top_10_richest
+df_leaflet@data
 ```
 

@@ -19,6 +19,8 @@ library(mapview)
 library(sf)
 library(httr)
 library(janitor)
+library(lattice)
+library(sp)
 
 # load datasets:
 ny_spdf = geojson_read("../cleaned_data/nyc-zip-code-tabulation-areas-polygons.geojson",  what = "sp")
@@ -145,6 +147,7 @@ server = function(input, output, session) {
                                 textsize = "10px",
                                 direction = "auto"),
                             highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                
                 clearControls() %>%
                 addLegend( pal=mypalette, values=target_date_pos$positive, opacity=0.5, title = "numbers", position = "bottomleft" )
             
