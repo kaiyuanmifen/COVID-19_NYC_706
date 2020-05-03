@@ -23,7 +23,7 @@ library(janitor)
 # load datasets:
 ny_spdf = geojson_read("../cleaned_data/nyc-zip-code-tabulation-areas-polygons.geojson",  what = "sp")
 df_leaflet = ny_spdf
-df_final = read.csv("../cleaned_data/zip_count_rate_temp.csv", check.names = F, stringsAsFactors = F)
+df_final = read.csv("../cleaned_data/non_polygon_df_final.csv", check.names = F, stringsAsFactors = F)
 df_final <- clean_names(df_final)
 
 # rename ZIP column to postalCode to enable merge
@@ -63,11 +63,10 @@ ui <- fluidPage(
                                  </p>"),
                br()
         )),
-    
-    
+ 
     fluidRow(
         column(10,offset = 1, align="center",
-               selectInput("choose_stat","Statistic of interest",choices = c("positive cases","total tested")),
+               selectInput("choose_stat","Statistic of interest",choices = c("positive cases", "positive cases per million capita", "total tested", "total tested per million capita")),
                br(),
         )),
     
@@ -120,6 +119,12 @@ server = function(input, output, session) {
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
                 "Positive cases: ",target_date_pos$positive, "<br/>", 
+                "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
+                "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
+                "Asian proportion: ", df_leaflet@data$asian_prop,"<br/>",
+                "Hispanic proportion: ", df_leaflet@data$hispanic_prop,"<br/>",
+                "White proportion: ", df_leaflet@data$white_prop,"<br/>",
+                "Hawaiian/Pasifika proportion: ", df_leaflet@data$hawaiian_pi_prop,"<br/>",
                 sep="") %>%
                 lapply(htmltools::HTML)
             
@@ -140,7 +145,7 @@ server = function(input, output, session) {
                                 direction = "auto"),
                             highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
                 clearControls() %>%
-                addLegend( pal=mypalette, values=target_date_pos$positive, opacity=0.5, title = "Cases", position = "bottomleft" )
+                addLegend( pal=mypalette, values=target_date_pos$positive, opacity=0.5, title = "numbers", position = "bottomleft" )
             
         }else if(stat == 'total tested'){
             # subset dataframe for inputs
@@ -152,6 +157,12 @@ server = function(input, output, session) {
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
                 "Total tested: ",target_date_pos$total, "<br/>", 
+                "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
+                "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
+                "Asian proportion: ", df_leaflet@data$asian_prop,"<br/>",
+                "Hispanic proportion: ", df_leaflet@data$hispanic_prop,"<br/>",
+                "White proportion: ", df_leaflet@data$white_prop,"<br/>",
+                "Hawaiian/Pasifika proportion: ", df_leaflet@data$hawaiian_pi_prop,"<br/>",
                 sep="") %>%
                 lapply(htmltools::HTML)
             
@@ -173,9 +184,80 @@ server = function(input, output, session) {
                             highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
                 clearControls() %>%
                 addLegend( pal=mypalette, values=target_date_pos$total, opacity=0.5, title = "Cases", position = "bottomleft" )
+        }else if(stat == 'total tested per million capita'){
+            # subset dataframe for inputs
+            target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','tests_per_capita'))
             
+            mybins = seq(0, 65000, by = 5000)
+            mypalette = colorBin( palette="Blues", domain = target_date_pos$tests_per_capita, na.color="transparent", bins=mybins)
             
+            mytag = paste(
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Total tested per million capita: ",target_date_pos$tests_per_capita, "<br/>",
+                "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
+                "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
+                "Asian proportion: ", df_leaflet@data$asian_prop,"<br/>",
+                "Hispanic proportion: ", df_leaflet@data$hispanic_prop,"<br/>",
+                "White proportion: ", df_leaflet@data$white_prop,"<br/>",
+                "Hawaiian/Pasifika proportion: ", df_leaflet@data$hawaiian_pi_prop,"<br/>",
+                sep="") %>%
+                lapply(htmltools::HTML)
             
+            leaflet(df_leaflet) %>% 
+                addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap
+                #  clearShapes() %>%
+                setView(-73.935242, 40.710310, zoom = 9.5) %>%
+                addPolygons(data =df_leaflet, 
+                            fillColor = ~mypalette(target_date_pos$tests_per_capita),
+                            fillOpacity = 0.5,
+                            stroke=TRUE,
+                            weight=0.8,
+                            color="#000000",
+                            label = mytag,
+                            labelOptions = labelOptions(
+                                style = list("font-weight" = "normal", padding = "3px 8px"),
+                                textsize = "10px",
+                                direction = "auto"),
+                            highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                clearControls() %>%
+                addLegend( pal=mypalette, values=target_date_pos$tests_per_capita, opacity=0.5, title = "Tests per million capita", position = "bottomleft" )
+        }else if(stat == 'positive cases per million capita'){
+            # subset dataframe for inputs
+            target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','positive_per_capita'))
+            
+            mybins = seq(0, 35000, by = 5000)
+            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$positive_per_capita, na.color="transparent", bins=mybins)
+            
+            mytag = paste(
+                "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
+                "Positive cases per million capita: ",target_date_pos$positive_per_capita, "<br/>", 
+                "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
+                "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
+                "Asian proportion: ", df_leaflet@data$asian_prop,"<br/>",
+                "Hispanic proportion: ", df_leaflet@data$hispanic_prop,"<br/>",
+                "White proportion: ", df_leaflet@data$white_prop,"<br/>",
+                "Hawaiian/Pasifika proportion: ", df_leaflet@data$hawaiian_pi_prop,"<br/>",
+                sep="") %>%
+                lapply(htmltools::HTML)
+            
+            leaflet(df_leaflet) %>% 
+                addProviderTiles(providers$CartoDB.Positron) %>%  #add simpler basemap
+                #  clearShapes() %>%
+                setView(-73.935242, 40.710310, zoom = 9.5) %>%
+                addPolygons(data =df_leaflet, 
+                            fillColor = ~mypalette(target_date_pos$positive_per_capita),
+                            fillOpacity = 0.5,
+                            stroke=TRUE,
+                            weight=0.8,
+                            color="#000000",
+                            label = mytag,
+                            labelOptions = labelOptions(
+                                style = list("font-weight" = "normal", padding = "3px 8px"),
+                                textsize = "10px",
+                                direction = "auto"),
+                            highlight = highlightOptions(color = "white", weight = 2, bringToFront = TRUE)) %>%
+                clearControls() %>%
+                addLegend( pal=mypalette, values=target_date_pos$positive_per_capita, opacity=0.5, title = "Cases per million capita", position = "bottomleft" )
         }
     })
     
@@ -195,6 +277,12 @@ server = function(input, output, session) {
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
                 "Positive cases: ",target_date_pos$positive, "<br/>", 
+                "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
+                "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
+                "Asian proportion: ", df_leaflet@data$asian_prop,"<br/>",
+                "Hispanic proportion: ", df_leaflet@data$hispanic_prop,"<br/>",
+                "White proportion: ", df_leaflet@data$white_prop,"<br/>",
+                "Hawaiian/Pasifika proportion: ", df_leaflet@data$hawaiian_pi_prop,"<br/>",
                 sep="") %>%
                 lapply(htmltools::HTML)
             
@@ -226,6 +314,12 @@ server = function(input, output, session) {
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
                 "Total tested: ",target_date_pos$total, "<br/>", 
+                "Female proportion: ", df_leaflet@data$female_prop,"<br/>",
+                "Black proportion: ", df_leaflet@data$black_prop,"<br/>",
+                "Asian proportion: ", df_leaflet@data$asian_prop,"<br/>",
+                "Hispanic proportion: ", df_leaflet@data$hispanic_prop,"<br/>",
+                "White proportion: ", df_leaflet@data$white_prop,"<br/>",
+                "Hawaiian/Pasifika proportion: ", df_leaflet@data$hawaiian_pi_prop,"<br/>",
                 sep="") %>%
                 lapply(htmltools::HTML)
             

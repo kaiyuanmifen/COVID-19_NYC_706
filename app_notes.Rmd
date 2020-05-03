@@ -257,7 +257,8 @@ mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$positive, na.co
 
 mytag = paste(
   "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
-  "Positive cases: ",target_date_pos$positive, "<br/>", 
+  "Borough: ", df_leaflet@data$name,"<br/>",
+  "Positive cases: ",target_date_pos$positive, "<br/>",
   sep="") %>%
   lapply(htmltools::HTML)
 
@@ -284,9 +285,49 @@ leaflet(df_leaflet) %>%
 ```
 
 ```{r}
+# data clean-up
+df1 = read.csv("cleaned_data/zip_count_rate_temp.csv", check.names = F, stringsAsFactors = F)
 
-test_max <- max(df_final$total)
-test_max
+df1 <- clean_names(df1)
 
+df_sub <- subset(df1, select = c('population', 'zip', 'positive', 'total', 'name', 'population_count', 'male_count', 'female_count', 'white_count', 'black_count', 'native_american_count', 'asian_count', 'hawaiian_pacific_islander_count', 'other_count', 'two_or_more_race_count', 'hispanic_race_count', 'median_household_income', 'latitude', 'longitude', 'date'))
+
+
+```
+
+```{r}
+# compute some basic statistics that we need like proportions, population_weighted stats per zipcode
+
+df_to_csv <- df_sub %>%
+  as_tibble() %>%
+  mutate(
+    positive_per_capita = round(1000000 * positive / population, 0),
+    tests_per_capita = round(1000000 * total / population, 0),
+    male_prop = round(100 * male_count / (male_count + female_count),1),
+    female_prop = round(100*female_count / (male_count + female_count), 1),
+    white_prop = round(100*white_count / (male_count + female_count), 1),
+    black_prop = round(100*black_count / (male_count + female_count),1),
+    asian_prop = round(100*asian_count / (male_count + female_count),1),
+    hawaiian_pi_prop = round(100*hawaiian_pacific_islander_count / (male_count + female_count),1),
+    other_prop = round(100*other_count / (male_count + female_count),1),
+    multi_race_prop = round(100*two_or_more_race_count / (male_count + female_count),1),
+    hispanic_prop = round(100*hispanic_race_count / (male_count + female_count),1)
+  )
+
+```
+
+
+
+```{r}
+# write data to clean csv
+write.csv(df_to_csv, "cleaned_data/non_polygon_df_final.csv", row.names = F)
+```
+
+```{r}
+df_final = read.csv("cleaned_data/non_polygon_df_final.csv", check.names = F, stringsAsFactors = F)
+```
+
+```{r}
+max(df_final$positive_per_capita, na.rm=T)
 ```
 
