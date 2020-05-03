@@ -39,7 +39,7 @@ library(dplyr)
 zip_dict <- read_csv("virus_data/ZIP-COUNTY-FIPS_2017-06.csv")
 z_demo_county <- read_csv("virus_data/county_data.csv") %>% mutate(STCOUNTYFP = paste0(statefip, fipcode))
 z_demo <- read_csv("~/Downloads/Demographic_Statistics_By_Zip_Code.csv") %>% mutate(ZIP = `JURISDICTION NAME`)
-z_pop <- read_csv("~/Documents/population_zip.csv", col_names = FALSE) %>% mutate(ZIP = as.numeric(X2))
+z_pop <- read_csv("~/Documents/population_zip.csv", col_names = FALSE) %>% rename(population = X3, ZIP = X2) %>% select(-X1) %>% mutate(ZIP = as.numeric(ZIP))
 # colnames(z_demo)[1] <- "ZIP"
 # z_state <- read_csv("state_data.csv")
 
@@ -50,7 +50,9 @@ z_pop <- read_csv("~/Documents/population_zip.csv", col_names = FALSE) %>% mutat
 
 library(dplyr)
 dft <-left_join(z_df, zip_dict)
+dft <- left_join(dft, z_demo_county)
 dft <- left_join(dft, z_demo)
 dft <- left_join(dft, z_pop)
+dft$DATE  <- as.Date(as.POSIXct(as.numeric(dft$UNIX_TIME), origin="1970-01-01"))
 write_csv(dft, "cleaned_data/zip_count_rate_temp.csv")
 
