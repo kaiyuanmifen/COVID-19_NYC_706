@@ -147,7 +147,7 @@ server = function(input, output, session) {
             target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','total'))
             
             mybins = seq(0, 5000, by = 1000)
-            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$total, na.color="transparent", bins=mybins)
+            mypalette = colorBin( palette="Blues", domain = target_date_pos$total, na.color="transparent", bins=mybins)
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
@@ -221,7 +221,7 @@ server = function(input, output, session) {
             target_date_pos <- subset(df_leaflet@data, date==target_date, select=c('postalCode','total'))
             
             mybins = seq(0, 5000, by = 1000)
-            mypalette = colorBin( palette="YlOrRd", domain = target_date_pos$total, na.color="transparent", bins=mybins)
+            mypalette = colorBin( palette="Blues", domain = target_date_pos$total, na.color="transparent", bins=mybins)
             
             mytag = paste(
                 "Zipcode: ", df_leaflet@data$postalCode,"<br/>", 
